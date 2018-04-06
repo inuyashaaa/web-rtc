@@ -1,4 +1,5 @@
 const http = require('http')
+const https = require('https')
 const express = require('express')
 const serveStatic = require('serve-static')
 const socketIo = require('socket.io')
@@ -38,6 +39,33 @@ easyrtc.events.on('easyrtcAuth', function (socket, easyrtcid, msg, socketCallbac
 easyrtc.events.on('roomJoin', function (connectionObj, roomName, roomParameter, callback) {
   console.log('[' + connectionObj.getEasyrtcid() + '] Credential retrieved!', connectionObj.getFieldValueSync('credential'))
   easyrtc.events.defaultListeners.roomJoin(connectionObj, roomName, roomParameter, callback)
+})
+
+// Node Get ICE STUN and TURN list
+const options = {
+  host: 'global.xirsys.net',
+  path: '/_turn/MyFirstApp',
+  method: 'PUT',
+  headers: {
+    'Authorization': 'Basic ' + new Buffer('manhtmhp123:03b1a200-39d0-11e8-884f-1b859292c95c').toString('base64')
+  }
+}
+
+easyrtc.on('getIceConfig', function (connectionObj, callback) {
+  const httpreq = https.request(options, function (httpres) {
+    let str = ''
+    httpres.on('data', function (data) { str += data })
+    httpres.on('error', function (e) { console.log('error: ', e) })
+    httpres.on('end', function () {
+      var d = JSON.parse(str)
+      if (d.s == 'ok') {
+        var iceConfig = d.v.iceServers
+        console.log('server list: ', iceConfig)
+        callback(null, iceConfig)
+      }
+    })
+  })
+  httpreq.end()
 })
 
 // Start EasyRTC server
